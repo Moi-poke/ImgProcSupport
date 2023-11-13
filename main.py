@@ -51,6 +51,7 @@ class mainwindow(GuiApp):
         self.left_top_y = 0
         self.right_bottom_y = 720
         self.mainCanvas.bind("<Button-1>", self.on_button_press)
+        self.mainCanvas.bind("<Button-3>", self.on_right_button_press)
         self.mainCanvas.bind("<B1-Motion>", self.on_drag)
         self.mainCanvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.saveSelectArea.configure(command=self.saveRectArea)
@@ -97,6 +98,8 @@ class mainwindow(GuiApp):
         # save mouse drag start position
         self.start_x = event.x
         self.start_y = event.y
+        self.end_x = min(max(event.x, 0), 640)
+        self.end_y = min(max(event.y, 0), 360)
         self.rect = self.mainCanvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='green',width=2,  tags="drawn_rectangle")
 
     def on_drag(self, event):
@@ -115,8 +118,24 @@ class mainwindow(GuiApp):
         self.template_matching()
         pass
     
+    def on_right_button_press(self, event):
+        self.mainCanvas.delete("drawn_rectangle")
+        self.resetRect()
+        self.template_matching()
+        
+    
     def reshowSetting(self):
         self.setting.mainwindow.deiconify()
+    
+    def resetRect(self):
+        if self.rect is not None:
+            self.left_top_x = 0
+            self.right_bottom_x = 1280
+            self.left_top_y = 0
+            self.right_bottom_y = 720
+            self.mainCanvas.delete(self.rect)
+        else:
+            return
     
     def setImgDir(self):
         if self.ImageDirectoryPath == "":
@@ -150,8 +169,10 @@ class mainwindow(GuiApp):
             if _ == "":
                 return
             else:
-                self.pathImage = _
-            self.changePreview()
+                self.pathImage = _          
+                self.resetRect()
+                
+                self.changePreview()
             
     def loadTemplateImage(self):
         if self.resourceRootPath == "":
@@ -162,16 +183,18 @@ class mainwindow(GuiApp):
         if _ == "":
             return
         else:
-            self.pathTempImage = _
+            self.pathTempImage = _                 
+            self.resetRect()
         
-        self.changePreview()
+            self.changePreview()
         
 
     def loadImage(self, event):
         _path:str = str(event.data)
         if _path.endswith(".png"):
             try:
-                self.pathImage = _path
+                self.pathImage = _path                 
+                self.resetRect()
                 self.changePreview()
                 return True
             except Exception as e:
@@ -182,7 +205,8 @@ class mainwindow(GuiApp):
         _path:str = str(event.data)
         if _path.endswith(".png"):
             try:
-                self.pathTempImage = _path
+                self.pathTempImage = _path                        
+                self.resetRect()
                 self.changePreview()                
                 return True
             except Exception as e:
@@ -357,7 +381,9 @@ class mainwindow(GuiApp):
 
         w, h = _template.shape[1], _template.shape[0]
         if w > src_w or h > src_h:
-            print("テンプレート画像が選択範囲より大きいため画像認識できません")
+            self.generatedCommand.set("Error: Your selection is smaller than the template image")
+            for _ in self.found:
+                self.mainCanvas.delete(_)
             return
 
         method = cv2.TM_CCOEFF_NORMED
@@ -408,7 +434,8 @@ class mainwindow(GuiApp):
             result, n = cv2.imencode(".png", img)
 
             if result:
-                filename = "./screenshot/SS_" + datetime.now().strftime("%Y%m%d%H%M%S") + '.png'
+                # filename = "./screenshot/SS_" + datetime.now().strftime("%Y%m%d%H%M%S") + '.png'
+                filename = filedialog.asksaveasfilename(filetypes=[("PNG", ".png")], defaultextension="png")
                 with open(filename, mode="w+b") as f:
                     n.tofile(f)
                 return True
