@@ -11,6 +11,9 @@ from PIL import ImageTk, Image
 import cv2
 from tkinterdnd2 import DND_FILES
 from tkinter import filedialog
+import sys
+
+BASE_PATH = os.path.dirname(sys.argv[0])
 
 class ColorType(Enum):
     @staticmethod
@@ -68,7 +71,7 @@ class mainwindow(GuiApp):
         self.pathTempImage:str = None
         self.entryCommandShow.configure(state="readonly")
         
-        commandGenerations:list = self.get_cfg_files("./cfg") # ["PokeCon.", "SWCon."]
+        commandGenerations:list = self.get_cfg_files(f"{BASE_PATH}/cfg") # ["PokeCon.", "SWCon."]
         self.cbCommand.configure(values=commandGenerations)
         self.cbCommand.set(commandGenerations[0])
         self.found = []
@@ -89,8 +92,8 @@ class mainwindow(GuiApp):
         self.setting.buttonOK.configure(command=self.applySetting)
         self.setting.entryImgDir.configure(state="readonly")        
         self.setting.entryRescRoot.configure(state="readonly")        
-        self.resourceRootPath:str = os.path.dirname(__file__)
-        self.ImageDirectoryPath:str = os.path.dirname(__file__)
+        self.resourceRootPath:str = BASE_PATH
+        self.ImageDirectoryPath:str = BASE_PATH
     
     def on_button_press(self, event):
         # delete all previous rectangles
@@ -139,7 +142,7 @@ class mainwindow(GuiApp):
     
     def setImgDir(self):
         if self.ImageDirectoryPath == "":
-            init_dir = os.path.abspath(os.path.dirname(__file__))
+            init_dir = os.path.abspath(BASE_PATH)
         else:
             init_dir = self.ImageDirectoryPath
         self.ImageDirectoryPath = filedialog.askdirectory(initialdir=init_dir)
@@ -147,7 +150,7 @@ class mainwindow(GuiApp):
     
     def setResourceRoot(self):
         if self.resourceRootPath == "":
-            init_dir = os.path.abspath(os.path.dirname(__file__))
+            init_dir = os.path.abspath(BASE_PATH)
         else:
             init_dir = self.resourceRootPath
         self.resourceRootPath = filedialog.askdirectory(initialdir=init_dir)
@@ -176,7 +179,7 @@ class mainwindow(GuiApp):
             
     def loadTemplateImage(self):
         if self.resourceRootPath == "":
-            init_dir = os.path.abspath(os.path.dirname(__file__))
+            init_dir = os.path.abspath(BASE_PATH)
         else:
             init_dir = self.resourceRootPath
         _ = filedialog.askopenfilename(initialdir=init_dir, filetypes=[("png","*.png")])
