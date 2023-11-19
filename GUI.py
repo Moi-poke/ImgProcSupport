@@ -236,23 +236,26 @@ class initSetting:
     def __init__(self, master=None):
         # build ui
         self.ctktoplevel_1 = CTkToplevel(master)
+        self.ctktoplevel_1.configure(width=500)
+        self.ctktoplevel_1.resizable(False, False)
+        self.ctktoplevel_1.title("Setting")
         self.labelSetting = CTkLabel(self.ctktoplevel_1)
         self.labelSetting.configure(text='Settings')
-        self.labelSetting.grid(column=0, columnspan=4, row=0, sticky="ew")
+        self.labelSetting.grid(columnspan=3, row=0, sticky="nsew")
         self.labelImgDir = CTkLabel(self.ctktoplevel_1)
         self.labelImgDir.configure(text='Image Directory')
-        self.labelImgDir.grid(column=0, row=1)
+        self.labelImgDir.grid(column=0, row=1, sticky="nsew")
         self.entryImgDir = CTkEntry(self.ctktoplevel_1)
         self.pathImgDir = tk.StringVar()
         self.entryImgDir.configure(
             placeholder_text="Set the directory path.",
-            show="•",
+            takefocus=True,
             textvariable=self.pathImgDir,
             width=400)
-        self.entryImgDir.grid(column=1, row=1)
+        self.entryImgDir.grid(column=1, row=1, sticky="nsew")
         self.ButtonSetImgDir = CTkButton(self.ctktoplevel_1)
         self.ButtonSetImgDir.configure(text='...', width=30)
-        self.ButtonSetImgDir.grid(column=2, row=1)
+        self.ButtonSetImgDir.grid(column=2, row=1, sticky="nsew")
         self.labelRescRoot = CTkLabel(self.ctktoplevel_1)
         self.labelRescRoot.configure(text='Resource Root')
         self.labelRescRoot.grid(column=0, row=2)
@@ -262,13 +265,26 @@ class initSetting:
             placeholder_text="Set the resource root path.",
             textvariable=self.pathRescRoot,
             width=400)
-        self.entryRescRoot.grid(column=1, row=2)
+        self.entryRescRoot.grid(column=1, row=2, sticky="nsew")
         self.ButtonSetResourceRoot = CTkButton(self.ctktoplevel_1)
         self.ButtonSetResourceRoot.configure(text='...', width=30)
-        self.ButtonSetResourceRoot.grid(column=2, row=2)
+        self.ButtonSetResourceRoot.grid(column=2, row=2, sticky="nsew")
+        self.labelLanguage = CTkLabel(self.ctktoplevel_1)
+        self.TVlanguage = tk.StringVar(value='Language')
+        self.labelLanguage.configure(
+            text='Language', textvariable=self.TVlanguage)
+        self.labelLanguage.grid(column=0, row=3)
+        self.cbLanguage = CTkComboBox(self.ctktoplevel_1)
+        self.lang = tk.StringVar()
+        self.cbLanguage.configure(variable=self.lang)
+        self.cbLanguage.grid(column=1, columnspan=2, row=3, sticky="nsew")
         self.buttonOK = CTkButton(self.ctktoplevel_1)
         self.buttonOK.configure(text='OK', width=50)
-        self.buttonOK.grid(column=0, columnspan=4, row=4)
+        self.buttonOK.grid(column=1, row=4)
+        self.ctktoplevel_1.grid_anchor("center")
+        self.ctktoplevel_1.columnconfigure(0, weight=1)
+        self.ctktoplevel_1.columnconfigure(1, weight=2)
+        self.ctktoplevel_1.columnconfigure(2, weight=1)
 
         # Main widget
         self.mainwindow = self.ctktoplevel_1
@@ -276,6 +292,8 @@ class initSetting:
     def run(self):
         self.mainwindow.mainloop()
 
+    def run(self):
+        self.mainwindow.mainloop()
 
 if __name__ == "__main__":
     app = initSetting()

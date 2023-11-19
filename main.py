@@ -2,16 +2,21 @@
 from datetime import datetime
 from enum import Enum, auto
 import glob
+import logging
+import logging.handlers
 import os
 import pathlib
+from typing import Any, Optional
 import numpy as np
 import pygubu
+import toml
 from GUI import GuiApp, initSetting
 from PIL import ImageTk, Image
 import cv2
 from tkinterdnd2 import DND_FILES
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import sys
+from loguru import logger
 
 BASE_PATH = os.path.dirname(sys.argv[0])
 
@@ -27,109 +32,193 @@ class ColorType(Enum):
 class mainwindow(GuiApp):
     def __init__(self, master=None):
         super().__init__()
+    
+        # Setting window initialization
         self.setting = initSetting(master=self.mainwindow)
         self.setting.mainwindow.title("Setting")
         self.setting.mainwindow.protocol("WM_DELETE_WINDOW", self.setting.mainwindow.withdraw)
-        
+
+        # Image and canvas initialization
         self.imageCV:cv2.Mat = None
         self.imageTempCV:cv2.Mat = None
         self.imagePIL:ImageTk.PhotoImage = None
         self.imageTempPIL:ImageTk.PhotoImage = None
         self.image:int = None
         self.imageTemp:int = None
-        
+
+        # Drag and drop settings for mainCanvas and canvas_2
         self.mainCanvas.drop_target_register(DND_FILES)
         self.mainCanvas.dnd_bind('<<Drop>>', self.loadImage)
         self.canvas_2.drop_target_register(DND_FILES)
         self.canvas_2.dnd_bind('<<Drop>>', self.loadTempImage)
-        
-        self.rect = None
-        self.start_x = None
-        self.start_y = None
-        self.end_x = None
-        self.end_y = None
-        
-        self.left_top_x = 0
-        self.right_bottom_x = 1280
-        self.left_top_y = 0
-        self.right_bottom_y = 720
+
+        # Rectangle drawing settings
+        self.rect: Any = None
+        self.start_x: Optional[int] = None
+        self.start_y: Optional[int] = None
+        self.end_x: Optional[int] = None
+        self.end_y: Optional[int] = None
+        self.left_top_x:int = 0
+        self.right_bottom_x:int = 1280
+        self.left_top_y:int = 0
+        self.right_bottom_y:int = 720
         self.mainCanvas.bind("<Button-1>", self.on_button_press)
         self.mainCanvas.bind("<Button-3>", self.on_right_button_press)
         self.mainCanvas.bind("<B1-Motion>", self.on_drag)
         self.mainCanvas.bind("<ButtonRelease-1>", self.on_button_release)
         self.saveSelectArea.configure(command=self.saveRectArea)
-        
+
+        # Threshold and color mode settings
         self._threshold.set(0.80)
         self._BinaryThreshold.set(128)
         self.rbColor.configure(command=self.img_color_setting)
         self.rbGray.configure(command=self.img_color_setting)
         self.rbBin.configure(command=self.img_color_setting)
+
+        # Other settings
         self.rectStart:list|None = None
         self.rectEnd:list|None = None
         self.aspectRatio = 16/9
         self.pathImage:str = None
+        self._pathImage:str = None        
         self.pathTempImage:str = None
         self.entryCommandShow.configure(state="readonly")
-        
-        commandGenerations:list = self.get_cfg_files(f"{BASE_PATH}/cfg") # ["PokeCon.", "SWCon."]
+        commandGenerations:list = self.get_cfg_files(f"{BASE_PATH}/cfg/command")
         self.cbCommand.configure(values=commandGenerations)
         self.cbCommand.set(commandGenerations[0])
         self.found = []
         self._threshold.trace("w", self.callTemplateMatching)
-        
-        # self.openSetting.configure(command=self.)
-        self.getLatest.configure(command=self.changePreview)
-        self.cbAutoBin.configure(command=self.switchBinaryState)
-
+        self._BinaryThreshold.trace("w", self.callTemplateMatching)
         self.img_color_setting()
         self.openSetting.configure(command=self.reshowSetting)
         self.getLatest.configure(command=self.getLatestPNG)
         self.loadTemplate.configure(command=self.loadTemplateImage)
-        
         self.setting.mainwindow.attributes("-topmost", True)
         self.setting.ButtonSetImgDir.configure(command=self.setImgDir)
         self.setting.ButtonSetResourceRoot.configure(command=self.setResourceRoot)
         self.setting.buttonOK.configure(command=self.applySetting)
         self.setting.entryImgDir.configure(state="readonly")        
-        self.setting.entryRescRoot.configure(state="readonly")        
+        self.setting.entryRescRoot.configure(state="readonly")       
+        self.setting.cbLanguage.configure(state="readonly")
+        self.setting.cbLanguage.configure(values=[f[:-5] for f in os.listdir(f"{BASE_PATH}/lang") if f.endswith('.toml')])
         self.resourceRootPath:str = BASE_PATH
         self.ImageDirectoryPath:str = BASE_PATH
+        self.mainwindow.protocol("WM_DELETE_WINDOW", self._close)
+        self.setConfig()
+        self.loadImage()
+        self.loadTempImage()
+        
+    # Function to close the application
+    def _close(self):
+        try:
+            self.saveMainConfig()
+            self.mainwindow.destroy()
+        except Exception as e:
+            logger.exception(e)
+                
+    # Function to set the configuration
+    def setConfig(self):
+        self.loadMainConfig()
+        self.setLanguage()
+    # Function to load the main configuration
+    def loadMainConfig(self):
+        try:
+            path = f"./cfg/main.toml"
+            # ディレクトリが存在しない場合は作成
+            if not os.path.exists(log_dir):
+                logger.debug(f"Config file not found. Generate config.")
+                self.saveMainConfig(path)
+            with open(path, 'r', encoding="utf-8") as f:
+                config = toml.load(f)
+                self.setting.lang.set(config.get("lang", "./NOEXIST"))
+                self.setLanguage(config.get("lang", "./NOEXIST"))
+                self.commandStyle.set(config.get("command", "./NOEXIST"))
+                if os.path.exists(p:=config.get("lastImage", "./NOEXIST")):
+                    self.pathImage = p
+                if os.path.exists(pt:=config.get("lastTemplateImage", "./NOEXIST")):
+                    self.pathTempImage = pt
+                self.changePreview()
+                # self.template_matching()
+                
+                
+        except Exception as e:
+            logger.exception(e)
+            
+    # Function to save the main configuration
+    def saveMainConfig(self, path=None):
+        if path is None:
+            path = f"./cfg/main.toml"
+        d = {"lang" : self.setting.lang.get(),
+             "command" : self.commandStyle.get(),
+             "lastImage": self.pathImage,
+             "lastTemplateImage": self.pathTempImage}
+        with open(path, 'w', encoding="utf-8") as f:
+            toml.dump(d, f)
+            
+    # Function to set the language
+    def setLanguage(self, lang=None):
+        try:
+            if lang is None:
+                path = f"./lang/{self.setting.lang.get()}.toml"
+            else:
+                path = f"./lang/{lang}.toml"
+            with open(path, 'r', encoding="utf-8") as f:
+                config = toml.load(f)
+                self.TVAccuracy.set(config["Accuracy"])
+                self.TVCoodinate.set(config["Coodinate"])
+                self.TVcount.set(config["count"])
+                self.TVgetLatest.set(config["getLatest"])
+                self.TVlabelMode.set(config["labelMode"])
+                self.TVlabelTempSize.set(config["labelTempSize"])
+                self.TVloadTemplate.set(config["loadTemplate"])
+                self.TVopenSetting.set(config["openSetting"])
+                self.TVsaveSelectArea.set(config["saveSelectArea"])
+                self.TVThreshold.set(config["Threshold"])
+        except Exception as e:
+            logger.exception(e)
+            
     
+    # Function to handle button press event
     def on_button_press(self, event):
         # delete all previous rectangles
         self.mainCanvas.delete("drawn_rectangle")
         # save mouse drag start position
-        self.start_x = event.x
-        self.start_y = event.y
-        self.end_x = min(max(event.x, 0), 640)
-        self.end_y = min(max(event.y, 0), 360)
+        self.start_x = min(event.x, self.imagePIL.width())
+        self.start_y = min(event.y, self.imagePIL.height())
+        self.end_x = min(max(event.x, 0), 640, self.imagePIL.width())
+        self.end_y = min(max(event.y, 0), 360, self.imagePIL.height())
         self.rect = self.mainCanvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='green',width=2,  tags="drawn_rectangle")
 
+    # Function to handle drag event
     def on_drag(self, event):
         # update rectangle as mouse is dragged
         # make sure coordinates do not go beyond canvas boundaries
-        self.end_x = min(max(event.x, 0), 640)
-        self.end_y = min(max(event.y, 0), 360)
+        self.end_x = min(max(event.x, 0), 640, self.imagePIL.width())
+        self.end_y = min(max(event.y, 0), 360, self.imagePIL.height())
         self.mainCanvas.coords(self.rect, self.start_x, self.start_y, self.end_x, self.end_y)
 
+    # Function to handle button release event
     def on_button_release(self, event):
-        
-        self.left_top_x = min(self.start_x, self.end_x) * 2
-        self.right_bottom_x = max(self.start_x, self.end_x) * 2
-        self.left_top_y = min(self.start_y, self.end_y) * 2
-        self.right_bottom_y = max(self.start_y, self.end_y) * 2
-        self.template_matching()
-        pass
-    
+        try:
+            self.left_top_x = min(self.start_x, self.end_x) * 2
+            self.right_bottom_x = min(max(self.start_x, self.end_x) * 2, self.imagePIL.width()*2)
+            self.left_top_y = min(self.start_y, self.end_y) * 2
+            self.right_bottom_y = min(max(self.start_y, self.end_y) * 2, self.imagePIL.height()*2)
+            self.template_matching()
+        except Exception as e:
+            logger.exception(e)
+            
+    # Function to handle right button press event    
     def on_right_button_press(self, event):
         self.mainCanvas.delete("drawn_rectangle")
         self.resetRect()
         self.template_matching()
         
-    
+    # Function to re-display the setting's toplevel that was withdrawn
     def reshowSetting(self):
         self.setting.mainwindow.deiconify()
-    
+        
+    # Function to reset the rectangle
     def resetRect(self):
         if self.rect is not None:
             self.left_top_x = 0
@@ -139,7 +228,8 @@ class mainwindow(GuiApp):
             self.mainCanvas.delete(self.rect)
         else:
             return
-    
+
+    # Function to set the image directory
     def setImgDir(self):
         if self.ImageDirectoryPath == "":
             init_dir = os.path.abspath(BASE_PATH)
@@ -147,7 +237,8 @@ class mainwindow(GuiApp):
             init_dir = self.ImageDirectoryPath
         self.ImageDirectoryPath = filedialog.askdirectory(initialdir=init_dir)
         self.setting.pathImgDir.set(self.ImageDirectoryPath)
-    
+
+    # Function to set the resource root    
     def setResourceRoot(self):
         if self.resourceRootPath == "":
             init_dir = os.path.abspath(BASE_PATH)
@@ -155,18 +246,23 @@ class mainwindow(GuiApp):
             init_dir = self.resourceRootPath
         self.resourceRootPath = filedialog.askdirectory(initialdir=init_dir)
         self.setting.pathRescRoot.set(self.resourceRootPath)
-    
+        
+    # Function to apply the settings
     def applySetting(self):
         self.ImageDirectoryPath = self.setting.pathImgDir.get()
         self.resourceRootPath = self.setting.pathRescRoot.get()
+        self.setLanguage()
+        self.template_matching()
         self.setting.mainwindow.withdraw()
     
+    # Function to call the template matching
     def callTemplateMatching(self, *event):
-        self.template_matching()
+        self.changePreview()
 
+    # Function to get the latest PNG
     def getLatestPNG(self):
         if self.ImageDirectoryPath =="":
-            print(f"Set Directory First.")
+            logger.warning(f"Set Directory First.")
         else:
             _ = self.get_latest_png_file(self.ImageDirectoryPath)
             if _ == "":
@@ -176,7 +272,8 @@ class mainwindow(GuiApp):
                 self.resetRect()
                 
                 self.changePreview()
-            
+
+    # Function to load the template image            
     def loadTemplateImage(self):
         if self.resourceRootPath == "":
             init_dir = os.path.abspath(BASE_PATH)
@@ -191,21 +288,41 @@ class mainwindow(GuiApp):
         
             self.changePreview()
         
-
-    def loadImage(self, event):
-        _path:str = str(event.data)
-        if _path.endswith(".png"):
+    # Function to load the image
+    def loadImage(self, event=None):
+        if event is not None:
+            _path:str = str(event.data)
+        else:
             try:
-                self.pathImage = _path                 
                 self.resetRect()
                 self.changePreview()
                 return True
             except Exception as e:
-                print(e)
+                logger.exception("Caught an error: ", exc_info=True)
                 return False
-        
-    def loadTempImage(self, event):
-        _path:str = str(event.data)
+        if _path.endswith(".png"):
+            try:
+                self.pathImage = _path
+                # logger.debug(self.pathImage)
+                self.resetRect()
+                self.changePreview()
+                return True
+            except Exception as e:
+                logger.exception("Caught an error: ", exc_info=True)
+                return False
+            
+    # Function to load the template image
+    def loadTempImage(self, event=None):
+        if event is not None:
+            _path:str = str(event.data)
+        else:
+            try:
+                self.resetRect()
+                self.changePreview()
+                return True
+            except Exception as e:
+                logger.exception("Caught an error: ", exc_info=True)
+                return False
         if _path.endswith(".png"):
             try:
                 self.pathTempImage = _path                        
@@ -213,9 +330,10 @@ class mainwindow(GuiApp):
                 self.changePreview()                
                 return True
             except Exception as e:
-                print(e)
+                logger.exception("Caught an error: ", exc_info=True)
                 return False
     
+    # Function to switch binary state    
     def switchBinaryState(self, *event):
         if self.useAutoOtsu.get():
             self.sbBinary.configure(state="disable")
@@ -223,10 +341,12 @@ class mainwindow(GuiApp):
         else:
             self.sbBinary.configure(state="normal")
             self.sliderBinaryTh.configure(state="normal")
+        self.changePreview()
             
-
+    # Function to run the application
     def run(self):
         self.setting.mainwindow.withdraw()
+        logger.debug("Start Mainloop")
         self.mainwindow.mainloop()
 
     def img_color_setting(self):
@@ -234,21 +354,21 @@ class mainwindow(GuiApp):
             case ColorType.COLOR:
                 self.colorMode.set(ColorType.COLOR.value)
                 self.pixmap_mode = "Color"
-                print("change to Color mode")
+                logger.debug("change to Color mode")
                 self.cbAutoBin.configure(state="disable")
                 self.sbBinary.configure(state="disable")
                 self.sliderBinaryTh.configure(state="disable")
             case ColorType.GRAY:
                 self.colorMode.set(ColorType.GRAY.value)
                 self.pixmap_mode = "Gray Scale"
-                print("change to Gray-scale mode")
+                logger.debug("change to Gray-scale mode")
                 self.cbAutoBin.configure(state="disable")
                 self.sbBinary.configure(state="disable")
                 self.sliderBinaryTh.configure(state="disable")
             case ColorType.BINARY:
                 self.colorMode.set(ColorType.BINARY.value)
                 self.pixmap_mode = "Binarization"
-                print("change to Binary mode")
+                logger.debug("change to Binary mode")
                 self.cbAutoBin.configure(state="normal")
                 self.sbBinary.configure(state="normal")
                 self.sliderBinaryTh.configure(state="normal")
@@ -259,13 +379,24 @@ class mainwindow(GuiApp):
             updateImage = False
         else:
             updateImage = True
-            _imageCV = cv2.imread(self.pathImage)
+            buf = np.fromfile(self.pathImage, np.uint8)
+            _imageCV = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
+            if not (_imageCV.shape[0] == 720 and _imageCV.shape[1] == 1280):
+                messagebox.showwarning("Error", "Wrong Image size")
+                logger.error(f"Image size is {_imageCV.shape}")
+                updateImage = False
+                self.pathImage = self._pathImage
+            self._pathImage = self.pathImage
+
+            # _imageCV = cv2.imread(self.pathImage)
             
         if self.pathTempImage is None:
             updateTempImage = False
         else:            
             updateTempImage = True
-            _imageTemp = cv2.imread(self.pathTempImage)
+            buf = np.fromfile(self.pathTempImage, np.uint8)
+            _imageTemp = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
+            # _imageTemp = cv2.imread(self.pathTempImage)
             
             
         if not updateImage and not updateTempImage:
@@ -307,13 +438,15 @@ class mainwindow(GuiApp):
                 # template 
                 # [TODO] Since the target and the template are different files, the threshold determined by Otsu's method may vary.
                 self.imageTempCV = cv2.cvtColor(_imageTemp, cv2.COLOR_BGR2GRAY)
-                if self.useAutoOtsu.get():
-                    self.threshold, self.imageTempCV = cv2.threshold(self.imageTempCV, 0, 255, cv2.THRESH_OTSU)
-                    self.imageTempPIL = Image.fromarray(self.imageTempCV)
-                else:
-                    self.threshold = self._BinaryThreshold.get()
-                    self.threshold, self.imageTempCV = cv2.threshold(self.imageTempCV, self.threshold, 255, cv2.THRESH_BINARY)
-                    self.imageTempPIL = Image.fromarray(self.imageTempCV)
+                # if self.useAutoOtsu.get():
+                #     self.threshold, self.imageTempCV = cv2.threshold(self.imageTempCV, 0, 255, cv2.THRESH_OTSU)
+                #     # self._BinaryThreshold.set(self.threshold)
+                #     self.imageTempPIL = Image.fromarray(self.imageTempCV)
+                    
+                # else:
+                self.threshold = self._BinaryThreshold.get()
+                self.threshold, self.imageTempCV = cv2.threshold(self.imageTempCV, self.threshold, 255, cv2.THRESH_BINARY)
+                self.imageTempPIL = Image.fromarray(self.imageTempCV)
 
         
         if updateImage:
@@ -321,13 +454,13 @@ class mainwindow(GuiApp):
             h = self.imagePIL.height
             self.aspectRatio = w/h
             if self.aspectRatio > 16/9:
-                multiply = 640/w
+                self.multiply = 640/w
             else:
-                multiply = 360/h
-            self.imagePIL = self.imagePIL.resize((int(w*multiply),int(h*multiply)))
+                self.multiply = 360/h
+            self.imagePIL = self.imagePIL.resize((int(w*self.multiply),int(h*self.multiply)))
             
             self.imagePIL = ImageTk.PhotoImage(self.imagePIL)
-            # print(self.imagePIL.width())
+            # logger.debug(self.imagePIL.width())
             
             
             # ラベルに画像を指定
@@ -336,8 +469,11 @@ class mainwindow(GuiApp):
             else:
                 self.mainCanvas.itemconfig(self.image, image=self.imagePIL)
             
+            # if 
+            
         
         if updateTempImage:
+            logger.debug("Update template image")
             w = self.imageTempPIL.width
             h = self.imageTempPIL.height
             ar = w/h
@@ -375,7 +511,9 @@ class mainwindow(GuiApp):
         
         if self.rect is not None:
             # Calculate the selected region coordinates
-            src = src[self.left_top_y:self.right_bottom_y, self.left_top_x:self.right_bottom_x]
+            logger.debug(f"{self.multiply=}, {self.left_top_y//2//self.multiply}, {self.right_bottom_y//2//self.multiply}, {self.left_top_x//2//self.multiply}, {self.right_bottom_x//2//self.multiply}")
+            src = src[int(self.left_top_y//2//self.multiply):int(self.right_bottom_y//2//self.multiply),
+                      int(self.left_top_x//2//self.multiply):int(self.right_bottom_x//2//self.multiply)]
             src_w = self.right_bottom_x - self.left_top_x
             src_h = self.right_bottom_y - self.left_top_y
             
@@ -409,17 +547,21 @@ class mainwindow(GuiApp):
             self.mainCanvas.delete(_)
             
         self.found = []
-        for i in range(box_n := len(boxes)):
+        for i in range(min(128,box_n := len(boxes))):
             # self.debug(boxes[i])
             _h, _j, _n, _m = boxes[i]
-            found_rect = self.mainCanvas.create_rectangle(_h // 2, _j // 2, _h // 2 + w // 2, _j // 2 + h // 2, outline='red', width=1)
+            found_rect = self.mainCanvas.create_rectangle(int(_h *self.multiply),
+                                                          int(_j *self.multiply),
+                                                          int((_h + w )*self.multiply),
+                                                          int((_j  + h )*self.multiply),
+                                                          outline='red', width=1)
             self.found.append(found_rect)
         self.matchCount.set(box_n)
         
         self.convert()
         
     def convert(self):        
-        with open(f"./cfg/{self.commandStyle.get()}", 'r') as file:
+        with open(f"./cfg/command/{self.commandStyle.get()}", 'r', encoding="utf-8") as file:
             data = file.read()
             data = data.replace("%TEMPPATH%", f'"{str(os.path.relpath(self.pathTempImage, self.resourceRootPath))}"')
             data = data.replace("%THRESHOLD%", str(self._threshold.get()))
@@ -439,13 +581,15 @@ class mainwindow(GuiApp):
             if result:
                 # filename = "./screenshot/SS_" + datetime.now().strftime("%Y%m%d%H%M%S") + '.png'
                 filename = filedialog.asksaveasfilename(filetypes=[("PNG", ".png")], defaultextension="png")
-                with open(filename, mode="w+b") as f:
+                if filename == "":
+                    return False
+                with open(filename, mode="w+b", encoding="utf-8") as f:
                     n.tofile(f)
                 return True
             else:
                 return False
         except Exception as e:
-            print(e)
+            logger.exception("Caught an error: ", exc_info=True)
         return False        
     
     @staticmethod
@@ -526,6 +670,12 @@ class mainwindow(GuiApp):
 
 
 if __name__ == "__main__":
+    # ログファイルを保存するディレクトリ
+    log_dir = BASE_PATH+'/log'
+    # ディレクトリが存在しない場合は作成
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    logger.add(log_dir+"/log.log", rotation="1024 KB", retention= 5)
     app = mainwindow()
     app.run()
 

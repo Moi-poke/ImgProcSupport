@@ -434,15 +434,23 @@
       </object>
     </child>
   </object>
-  <object class="customtkinter.CTkToplevel" id="ctktoplevel_1">
+  <object class="customtkinter.CTkToplevel" id="ctktoplevel_1" named="True">
+    <property name="resizable">none</property>
+    <property name="title" translatable="yes">Setting</property>
+    <property name="width">500</property>
+    <containerlayout manager="grid">
+      <property name="anchor">center</property>
+      <property type="col" id="0" name="weight">1</property>
+      <property type="col" id="1" name="weight">2</property>
+      <property type="col" id="2" name="weight">1</property>
+    </containerlayout>
     <child>
       <object class="customtkinter.CTkLabel" id="labelSetting" named="True">
         <property name="text" translatable="yes">Settings</property>
         <layout manager="grid">
-          <property name="column">0</property>
-          <property name="columnspan">4</property>
+          <property name="columnspan">3</property>
           <property name="row">0</property>
-          <property name="sticky">ew</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
@@ -452,18 +460,20 @@
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">1</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
     <child>
       <object class="customtkinter.CTkEntry" id="entryImgDir" named="True">
         <property name="placeholder_text">Set the directory path.</property>
-        <property name="show">•</property>
+        <property name="takefocus">true</property>
         <property name="textvariable">string:pathImgDir</property>
         <property name="width">400</property>
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">1</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
@@ -474,6 +484,7 @@
         <layout manager="grid">
           <property name="column">2</property>
           <property name="row">1</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
@@ -494,6 +505,7 @@
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">2</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
@@ -504,6 +516,28 @@
         <layout manager="grid">
           <property name="column">2</property>
           <property name="row">2</property>
+          <property name="sticky">nsew</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="customtkinter.CTkLabel" id="labelLanguage" named="True">
+        <property name="text" translatable="yes">Language</property>
+        <property name="textvariable">string:TVlanguage</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">3</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="customtkinter.CTkComboBox" id="cbLanguage" named="True">
+        <property name="variable">string:lang</property>
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="columnspan">2</property>
+          <property name="row">3</property>
+          <property name="sticky">nsew</property>
         </layout>
       </object>
     </child>
@@ -512,8 +546,7 @@
         <property name="text" translatable="yes">OK</property>
         <property name="width">50</property>
         <layout manager="grid">
-          <property name="column">0</property>
-          <property name="columnspan">4</property>
+          <property name="column">1</property>
           <property name="row">4</property>
         </layout>
       </object>
