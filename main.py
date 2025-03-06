@@ -1,13 +1,16 @@
 #!/usr/bin/python3
+
 # from datetime import datetime
 from enum import Enum
 # import glob
 
 # import logging
+
 import os
 import pathlib
 from typing import Any, Optional
 import numpy as np
+
 import toml
 from GUI import GuiApp, initSetting
 from PIL import ImageTk, Image
@@ -19,6 +22,7 @@ import sys
 from loguru import logger
 
 BASE_PATH: pathlib.Path = pathlib.Path(sys.argv[0]).parent
+
 
 
 class ColorType(Enum):
@@ -55,6 +59,7 @@ class mainwindow(GuiApp):
         self.mainCanvas.dnd_bind("<<Drop>>", self.loadImage)
         self.canvas_2.drop_target_register(DND_FILES)
         self.canvas_2.dnd_bind("<<Drop>>", self.loadTempImage)
+
 
         # Rectangle drawing settings
         self.rect: Any = None
@@ -560,7 +565,6 @@ class mainwindow(GuiApp):
                     )
                 else:
                     self.mainCanvas.itemconfig(self.image, image=self.imagePIL)
-
                 # if
 
             if updateTempImage:
