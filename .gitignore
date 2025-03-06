@@ -1,0 +1,11 @@
+build/*
+dist/*
+log/*
+.venv/*
+.mypy_cache/*
+cfg/main.toml
+main.spec
+cfg/main.toml
+__pycache__/GUI.cpython-312.pyc
+uv.lock
+.python-version

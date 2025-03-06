@@ -1,0 +1,31 @@
+[project]
+name = "imgprocsupport"
+version = "0.3.0"
+description = "Support tools for image processing for Poke-Controller-modified extension"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "altgraph==0.17.4",
+    "colorama==0.4.6",
+    "customtkinter==5.2.0",
+    "darkdetect==0.8.0",
+    "loguru==0.7.2",
+    "numpy==1.26.2",
+    "opencv-python==4.8.1.78",
+    "packaging==23.2",
+    "pefile==2023.2.7",
+    "pillow==10.1.0",
+    "pywin32-ctypes==0.2.2",
+    "tkinterdnd2==0.3.0",
+    "toml==0.10.2",
+    "win32-setctime==1.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "nuitka>=2.6.7",
+    "pygubu>=0.31",
+    "pyinstaller-hooks-contrib>=2023.10",
+    "pyinstaller>=6.2.0",
+    "types-toml>=0.10.8.20240310",
+]
