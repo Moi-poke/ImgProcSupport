@@ -1,8 +1,8 @@
 # Support tool
 objective: 画像認識コマンドの生成簡易化
 
-environment
-python 3.12\
+## environment
+python 3.12
 
 ## メイン画面
 ![Alt text](./src/image2.png)
@@ -10,9 +10,9 @@ python 3.12\
 - 画像表示領域
 - drag-dropした画像を表示可能
 - マウス左クリックのドラッグドロップで矩形を描ける
+    - 矩形は緑枠
 - 描いた矩形はマウス右クリックで削除される
 - 矩形の範囲内のみで画像認識を行う
-    - 矩形は緑枠
 
 
 ### Threshold
@@ -38,7 +38,7 @@ python 3.12\
 
 ### Save Select Area
 - 矩形選択範囲を切り取って名前をつけて保存する
-- 
+- 保存後にそのまま読み込むことが可能
 
 ### Combo box (PokeCon.cfg)
 - `./cfg`フォルダ内の書式に従って画面最下段にコマンドを生成する
