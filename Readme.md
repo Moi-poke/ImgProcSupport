@@ -2,8 +2,7 @@
 objective: 画像認識コマンドの生成簡易化
 
 environment
-python 3.10.11\
-環境構築時は`pip install -r requirements.txt`してください
+python 3.12\
 
 ## メイン画面
 ![Alt text](./src/image2.png)
